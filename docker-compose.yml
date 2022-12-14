@@ -1,0 +1,18 @@
+version: '3.3'
+
+services:
+  db:
+    image: postgres:14
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_MAIN_USER}
+      POSTGRES_PASSWORD: ${DB_MAIN_PASSWORD}
+      PGDATA: /var/lib/postgresql/data
+      POSTGRES_DB_DEV: ${DB_NAME_DEVELOPMENT}
+      POSTGRES_DB_TEST: ${DB_NAME_TEST}
+    command: postgres -c stats_temp_directory=/tmp
+    volumes:
+      - ./.docker/services/db/data:/var/lib/postgresql/data
+      - ./.docker/services/db/volume:/docker-entrypoint-initdb.d
+    restart: always

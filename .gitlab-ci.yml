@@ -1,0 +1,43 @@
+image: docker:latest
+
+services:
+  - docker:dind
+
+variables:
+  DOCKER_DRIVER: overlay2
+  IMAGE_NAME: intern-management-api
+
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  image: docker:18-git
+  services:
+    - docker:18-dind
+  script:
+    - docker login -u $CI_DOCKER_USERNAME -p $CI_DOCKER_PASSWORD
+    - docker build -f ./Dockerfile --tag ${IMAGE_NAME}:latest
+    - docker push lampt2404/${IMAGE_NAME}:latest
+  only:
+    - uat
+
+deploy_test:
+  stage: deploy
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apk add --update openssh )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $SSH_IPADDRESS >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  script:
+    - echo "SSH to remote server"
+    - ssh $SSH_USER@$SSH_IPADDRESS "
+      kubectl version --short
+      kubectl set image deployment deploy-test deploy-test=lampt2404/deploy-test:latest
+      kubectl rollout restart deployment deploy-test -n default "
+  only:
+    - uat
